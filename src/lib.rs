@@ -1,3 +1,4 @@
+use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
 use syn::{Data, DataEnum, DataStruct, Fields};
 use synstructure::{quote, BindStyle, Structure};
@@ -16,11 +17,12 @@ fn derive_js_object(mut input: Structure) -> TokenStream {
 
     let set_props = input.each(|field| {
         let name = field.ast().ident.as_ref().expect("Tuple structs cannot be used to derive JsObject").to_string();
+        let name_camel = name.to_case(Case::Camel);
         let binding = &field.binding;
 
         quote! {
             (|| -> ::std::result::Result<(), ::nanom::ConversionError> {
-            env.set_property(object, env.create_string(#name)?, ::nanom::IntoJs::into_js(#binding, env)?)?;
+            env.set_property(object, env.create_string(#name_camel)?, ::nanom::IntoJs::into_js(#binding, env)?)?;
             ::std::result::Result::Ok(())
             })().map_err(|err| ::nanom::ConversionError::InObjectField { error: Box::new(err), field_name: #name })?;
         }
@@ -160,10 +162,11 @@ fn parse_fields(fields: &Fields) -> proc_macro2::TokenStream {
     let fields = fields.named.iter().map(|field| {
         let name = field.ident.as_ref().unwrap();
         let name_str = name.to_string();
+        let name_str_camel = name_str.to_case(Case::Camel);
 
         quote! {
             #name: (|| -> ::std::result::Result<_, ::nanom::ConversionError> {
-                ::nanom::FromJs::from_js(env, env.get_property(value, env.create_string(#name_str)?)?)
+                ::nanom::FromJs::from_js(env, env.get_property(value, env.create_string(#name_str_camel)?)?)
             })().map_err(|err| ::nanom::ConversionError::InObjectField { error: Box::new(err), field_name: #name_str })?,
         }
     });
@@ -179,7 +182,7 @@ fn fields_ts_type(fields: &Fields) -> proc_macro2::TokenStream {
     };
 
     let fields = fields.named.iter().map(|field| {
-        let name = field.ident.as_ref().unwrap().to_string();
+        let name = field.ident.as_ref().unwrap().to_string().to_case(Case::Camel);
         let ty = &field.ty;
 
         quote! {
