@@ -1,6 +1,6 @@
 use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
-use syn::{Data, DataEnum, DataStruct, Fields};
+use syn::{ext::IdentExt, Data, DataEnum, DataStruct, Fields};
 use synstructure::{quote, BindStyle, Structure};
 
 fn derive_js_object(mut input: Structure) -> TokenStream {
@@ -9,14 +9,14 @@ fn derive_js_object(mut input: Structure) -> TokenStream {
     }
 
     let kind = input.each_variant(|variant| {
-        let name = variant.ast().ident.to_string();
+        let name = variant.ast().ident.unraw().to_string();
         quote! { env.create_string(#name)? }
     });
 
     input.bind_with(|_| BindStyle::Move);
 
     let set_props = input.each(|field| {
-        let name = field.ast().ident.as_ref().expect("Tuple structs cannot be used to derive JsObject").to_string();
+        let name = field.ast().ident.as_ref().expect("Tuple structs cannot be used to derive JsObject").unraw().to_string();
         let name_camel = name.to_case(Case::Camel);
         let binding = &field.binding;
 
@@ -76,7 +76,7 @@ fn derive_js_object(mut input: Structure) -> TokenStream {
         Data::Enum(DataEnum { variants, .. }) => {
             let parse_variants = variants.into_iter().map(|variant| {
                 let name = &variant.ident;
-                let name_str = name.to_string();
+                let name_str = name.unraw().to_string();
 
                 let parse_fields = parse_fields(&variant.fields);
 
@@ -106,7 +106,7 @@ fn derive_js_object(mut input: Structure) -> TokenStream {
         }
     };
 
-    let type_name = input.ast().ident.to_string();
+    let type_name = input.ast().ident.unraw().to_string();
 
     let ts_type = match &input.ast().data {
         Data::Union(_) => panic!("Unions cannot be used to derive JsObject"),
@@ -116,7 +116,7 @@ fn derive_js_object(mut input: Structure) -> TokenStream {
         }
         Data::Enum(DataEnum { variants, .. }) => {
             let add_variants = variants.into_iter().map(|variant| {
-                let name_str = variant.ident.to_string();
+                let name_str = variant.ident.unraw().to_string();
 
                 let fields_type = fields_ts_type(&variant.fields);
 
@@ -161,7 +161,7 @@ fn parse_fields(fields: &Fields) -> proc_macro2::TokenStream {
 
     let fields = fields.named.iter().map(|field| {
         let name = field.ident.as_ref().unwrap();
-        let name_str = name.to_string();
+        let name_str = name.unraw().to_string();
         let name_str_camel = name_str.to_case(Case::Camel);
 
         quote! {
@@ -182,7 +182,7 @@ fn fields_ts_type(fields: &Fields) -> proc_macro2::TokenStream {
     };
 
     let fields = fields.named.iter().map(|field| {
-        let name = field.ident.as_ref().unwrap().to_string().to_case(Case::Camel);
+        let name = field.ident.as_ref().unwrap().unraw().to_string().to_case(Case::Camel);
         let ty = &field.ty;
 
         quote! {
