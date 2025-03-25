@@ -186,7 +186,7 @@ fn fields_ts_type(fields: &Fields) -> proc_macro2::TokenStream {
         let ty = &field.ty;
 
         quote! {
-            fields.insert(#name.to_string(), <#ty as ::nanom::TsType>::ts_type());
+            fields.insert(#name.to_string(), <#ty as ::nanom::TsType>::ts_type_ref());
         }
     });
 
