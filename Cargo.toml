@@ -1,6 +1,6 @@
 [package]
 name = "nanom-derive"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "derive macros for nanom"
 license = "MIT"
